@@ -1,0 +1,38 @@
+{
+	"schemaVersion": 1,
+	"id": "cobblemonspawns",
+	"version": "${version}",
+	"name": "Cobblemon Spawns",
+	"description": "A Cobblemon sidemod for custom spawning areas, specifically made for custom story maps.",
+	"authors": [
+		"bloodfall90"
+	],
+	"contact": {
+		"homepage": "https://fabricmc.net/",
+		"sources": "https://github.com/FabricMC/fabric-example-mod"
+	},
+	"license": "LGPL-3",
+	"icon": "assets/cobblemonspawns/icon.png",
+	"environment": "*",
+	"entrypoints": {
+		"main": [
+			"com.bloodfall.cobblemonspawns.CobblemonSpawns"
+		],
+		"client": [
+			"com.bloodfall.cobblemonspawns.client.CobblemonSpawnsClient"
+		]
+	},
+	"mixins": [
+		"cobblemonspawns.mixins.json"
+	],
+	"depends": {
+		"fabricloader": ">=0.14.22",
+		"minecraft": "~1.20.1",
+		"java": ">=17",
+		"fabric-api": "*",
+		"cobblemon": ">=1.5"
+	},
+	"suggests": {
+		"another-mod": "*"
+	}
+}
