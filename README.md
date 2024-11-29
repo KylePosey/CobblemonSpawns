@@ -1,9 +1,8 @@
-# Fabric Example Mod
+# Cobblemon Spawns Fabric
 
-## Setup
+## Info
 
-For setup instructions please see the [fabric wiki page](https://fabricmc.net/wiki/tutorial:setup) that relates to the IDE that you are using.
+This mod integrates with Cobblemon to allow map makers and server admins to setup "tall grass" areas and configure what pokemon and their levels,e tc can spawn. This works best with /gamerule doPokemonSpawn false.
 
-## License
-
-This template is available under the CC0 license. Feel free to learn from it and incorporate it in your own projects.
+## Install
+This mod is not currently hosted on any mod platform (For now!), grab the latest from the releases and drop it into your fabric installations mod folder.
