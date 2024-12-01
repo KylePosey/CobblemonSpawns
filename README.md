@@ -1,8 +1,20 @@
-# Cobblemon Spawns Fabric
+# 🐾 Cobblemon Spawns Fabric
 
-## Info
+## 🖥️ Info
 
-This mod integrates with Cobblemon to allow map makers and server admins to setup "tall grass" areas and configure what pokemon and their levels,e tc can spawn. This works best with /gamerule doPokemonSpawn false.
+This mod integrates with Cobblemon to allow map makers and server admins to set up "tall grass" areas and configure which Pokémon can spawn, along with their attributes like level and spawn chance! For best results, use `/gamerule doPokemonSpawn false`.
 
-## Install
-This mod is not currently hosted on any mod platform (For now!), grab the latest from the releases and drop it into your fabric installations mod folder.
+## 🛠️ Install
+Visit [Cobblemon Spawns on CurseForge](https://curseforge.com/minecraft/mc-mods/cobblemon-spawns) to download the mod.
+
+## 🚨 Disclaimer
+
+This mod is provided "as is" without any warranty. The author(s) are not responsible for any issues, damages, or data loss resulting from its use.
+
+## 📜 Permissions
+
+- ❌ **You may NOT** reupload this mod as your own.
+- ✅ **You may** edit and reupload this mod **with credit** to the original author(s).
+- ✅ **You may** include this mod in modpacks, maps, or servers. Credit is **not required** but is greatly appreciated!
+
+Thank you for supporting the mod!
