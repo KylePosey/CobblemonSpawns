@@ -23,6 +23,14 @@ public class Area {
         this.spawnConfigs = new ArrayList<>();
     }
 
+    public Area(UUID id, String name, BlockPos minPos, BlockPos maxPos) {
+        this.id = id;
+        this.name = name;
+        this.minPos = minPos;
+        this.maxPos = maxPos;
+        this.spawnConfigs = new ArrayList<>();
+    }
+
     // Getters and Setters
     public UUID getId() {
         return id;

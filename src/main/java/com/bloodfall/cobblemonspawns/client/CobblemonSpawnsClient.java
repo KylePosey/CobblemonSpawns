@@ -1,10 +1,10 @@
 package com.bloodfall.cobblemonspawns.client;
 
-import com.bloodfall.cobblemonspawns.Area;
-import com.bloodfall.cobblemonspawns.AreaManager;
-import com.bloodfall.cobblemonspawns.CobblemonSpawnsConfig;
+import com.bloodfall.cobblemonspawns.*;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
+import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents;
+import net.fabricmc.fabric.api.client.screenhandler.v1.ScreenRegistry;
 import net.minecraft.network.PacketByteBuf;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.BlockPos;
@@ -15,33 +15,44 @@ import java.util.UUID;
 
 public class CobblemonSpawnsClient implements ClientModInitializer {
 
-    public static final Identifier OPEN_AREA_GUI = new Identifier("cobblemonspawns", "open_area_gui");
-
     @Override
-    public void onInitializeClient() {
-        // Register the packet receiver for opening the Area Management Screen
+    public void onInitializeClient()
+    {
+        ClientPlayNetworking.registerGlobalReceiver(CobblemonSpawns.OPEN_AREA_GUI_PACKET_ID, (client, handler, buf, responseSender) -> {
+            // Deserialize areas
+            List<Area> areas = deserializeAreas(buf);
+
+            // Open the GUI on the client thread
+            client.execute(() -> {
+                client.setScreen(new AreaManagementScreen(areas));
+            });
+        });
+
+        ClientPlayNetworking.registerGlobalReceiver(CobblemonSpawns.START_BOUNDING_BOX_PACKET_ID, (client, handler, buf, responseSender) -> {
+            BlockPos minPos = buf.readBlockPos();
+            BlockPos maxPos = buf.readBlockPos();
+            client.execute(() -> {
+                BoundingBoxRenderer.addBoundingBox(minPos, maxPos);
+            });
+        });
+
+        // Handler for stopping rendering
+        ClientPlayNetworking.registerGlobalReceiver(CobblemonSpawns.STOP_BOUNDING_BOX_PACKET_ID, (client, handler, buf, responseSender) -> {
+            client.execute(BoundingBoxRenderer::clearBoundingBoxes);
+        });
+
+        WorldRenderEvents.BEFORE_DEBUG_RENDER.register(BoundingBoxRenderer::render);
     }
 
-    private static List<Area> deserializeAreas(PacketByteBuf buf) {
+    private List<Area> deserializeAreas(PacketByteBuf buf) {
+        int areaCount = buf.readInt();
         List<Area> areas = new ArrayList<>();
-        int size = buf.readInt();
-        for (int i = 0; i < size; i++) {
+        for (int i = 0; i < areaCount; i++) {
             UUID id = buf.readUuid();
             String name = buf.readString(32767);
             BlockPos minPos = buf.readBlockPos();
             BlockPos maxPos = buf.readBlockPos();
-            int configSize = buf.readInt();
-            List<CobblemonSpawnsConfig> spawnConfigs = new ArrayList<>();
-            for (int j = 0; j < configSize; j++) {
-                String pokemonName = buf.readString(32767);
-                double spawnRate = buf.readDouble();
-                int minLevel = buf.readInt();
-                int maxLevel = buf.readInt();
-                spawnConfigs.add(new CobblemonSpawnsConfig(pokemonName, spawnRate, minLevel, maxLevel));
-            }
-            Area area = new Area(name, minPos, maxPos);
-            area.id = id; // Set the UUID
-            area.getSpawnConfigs().addAll(spawnConfigs);
+            Area area = new Area(id, name, minPos, maxPos);
             areas.add(area);
         }
         return areas;
