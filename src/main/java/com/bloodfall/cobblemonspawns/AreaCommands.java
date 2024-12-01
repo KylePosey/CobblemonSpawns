@@ -24,6 +24,8 @@ import net.minecraft.entity.decoration.ArmorStandEntity;
 import net.minecraft.entity.decoration.DisplayEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.network.PacketByteBuf;
+import net.minecraft.network.message.MessageType;
+import net.minecraft.network.message.SentMessage;
 import net.minecraft.particle.ParticleTypes;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.command.CommandManager;
@@ -407,7 +409,6 @@ public class AreaCommands
     private static void debugArea(ServerWorld world, Area area, UUID playerId) {
         BlockPos minPos = area.getMinPos();
         BlockPos maxPos = area.getMaxPos();
-
         createFloatingText(world, area);
         spawnPersistentParticles(world, minPos, maxPos, playerId);
     }
@@ -461,6 +462,8 @@ public class AreaCommands
         });
     }
 
+
+
     private static void createFloatingText(ServerWorld world, Area area) {
         BlockPos minPos = area.getMinPos();
         BlockPos maxPos = area.getMaxPos();
@@ -472,12 +475,11 @@ public class AreaCommands
 
         String s = area.getName();
         createArmorStandText(center, center.getY(), world, area, s);
-
         int index = 1;
         for (CobblemonSpawnsConfig config : area.getSpawnConfigs()) {
             s = config.getCobblemonName() + " (" + config.getMinLevel() + " - " + config.getMaxLevel() + ") | " + config.getSpawnRate();
             BlockPos c = center;
-            createArmorStandText(center, c.getY() - index, world, area, s);
+            createArmorStandText(center, c.getY() - (index), world, area, s);
             index++;
         }
 
@@ -501,44 +503,14 @@ public class AreaCommands
         World world = player.getWorld();
         if (!(world instanceof ServerWorld serverWorld)) return;
 
-        UUID playerId = player.getUuid();
-        List<UUID> entities = debugEntities.getOrDefault(playerId, Collections.emptyList());
-
-        for (UUID entityId : entities) {
-            Entity entity = serverWorld.getEntity(entityId);
-            if (entity instanceof ArmorStandEntity armorStand) {
-                if (armorStand.getCommandTags().contains("debug_area")) { // Check for the tag
-                    entity.remove(Entity.RemovalReason.DISCARDED);
-                }
-            }
-        }
-
-        debugEntities.remove(playerId);
-
-
-        MinecraftServer server = player.getServer();
-        ServerWorld sWorld = (ServerWorld) player.getWorld();
-
-        ServerCommandSource commandSource = new ServerCommandSource(
-                player,
-                player.getPos(),
-                player.getRotationClient(),
-                sWorld,
-                4,
-                player.getName().getString(),
-                Text.of(player.getName().getString()),
-                server,
-                player
+        List<? extends  ArmorStandEntity> allArmorStands = serverWorld.getEntitiesByType(
+                EntityType.ARMOR_STAND,
+                armorStand -> armorStand.getCommandTags().contains("debug_area")
         );
 
-        CommandManager commandManager = server.getCommandManager();
-        String command = "kill @e[type=armor_stand,distance=..50]";
-        ParseResults<ServerCommandSource> parseResults = commandManager.getDispatcher().parse(new StringReader(command), commandSource);
-        try {
-            // Execute the parsed command
-            commandManager.getDispatcher().execute(parseResults);
-        } catch (CommandSyntaxException e) {
-            player.sendMessage(Text.of("Failed to execute command: " + e.getMessage()), false);
+        for (ArmorStandEntity armorStand : allArmorStands) {
+            //CobblemonSpawns.LOGGER.info("Removing persistent debug armor stand: {}", armorStand.getUuid());
+            armorStand.remove(Entity.RemovalReason.DISCARDED);
         }
     }
 
