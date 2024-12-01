@@ -2,9 +2,11 @@ package com.bloodfall.cobblemonspawns.client;
 
 import com.bloodfall.cobblemonspawns.Area;
 import com.bloodfall.cobblemonspawns.AreaManager;
+import com.bloodfall.cobblemonspawns.CobblemonSpawns;
 import com.bloodfall.cobblemonspawns.CobblemonSpawnsConfig;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
+import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents;
 import net.minecraft.network.PacketByteBuf;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.BlockPos;
@@ -19,31 +21,19 @@ public class CobblemonSpawnsClient implements ClientModInitializer {
 
     @Override
     public void onInitializeClient() {
-        // Register the packet receiver for opening the Area Management Screen
-    }
-
-    private static List<Area> deserializeAreas(PacketByteBuf buf) {
-        List<Area> areas = new ArrayList<>();
-        int size = buf.readInt();
-        for (int i = 0; i < size; i++) {
-            UUID id = buf.readUuid();
-            String name = buf.readString(32767);
+        ClientPlayNetworking.registerGlobalReceiver(CobblemonSpawns.START_BOUNDING_BOX_PACKET_ID, (client, handler, buf, responseSender) -> {
             BlockPos minPos = buf.readBlockPos();
             BlockPos maxPos = buf.readBlockPos();
-            int configSize = buf.readInt();
-            List<CobblemonSpawnsConfig> spawnConfigs = new ArrayList<>();
-            for (int j = 0; j < configSize; j++) {
-                String pokemonName = buf.readString(32767);
-                double spawnRate = buf.readDouble();
-                int minLevel = buf.readInt();
-                int maxLevel = buf.readInt();
-                spawnConfigs.add(new CobblemonSpawnsConfig(pokemonName, spawnRate, minLevel, maxLevel));
-            }
-            Area area = new Area(name, minPos, maxPos);
-            area.id = id; // Set the UUID
-            area.getSpawnConfigs().addAll(spawnConfigs);
-            areas.add(area);
-        }
-        return areas;
+            client.execute(() -> {
+                BoundingBoxRenderer.addBoundingBox(minPos, maxPos);
+            });
+        });
+
+        // Handler for stopping rendering
+        ClientPlayNetworking.registerGlobalReceiver(CobblemonSpawns.STOP_BOUNDING_BOX_PACKET_ID, (client, handler, buf, responseSender) -> {
+            client.execute(BoundingBoxRenderer::clearBoundingBoxes);
+        });
+
+        WorldRenderEvents.BEFORE_DEBUG_RENDER.register(BoundingBoxRenderer::render);
     }
 }

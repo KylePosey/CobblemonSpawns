@@ -28,6 +28,7 @@ import net.minecraft.network.message.MessageType;
 import net.minecraft.network.message.SentMessage;
 import net.minecraft.particle.ParticleTypes;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.PlayerManager;
 import net.minecraft.server.command.CommandManager;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.server.network.ServerPlayerEntity;
@@ -390,6 +391,7 @@ public class AreaCommands
                                                 debugPlayers.remove(playerId);
                                                 playerTickCounters.remove(playerId);
                                                 removeDebugEntities(player);
+                                                CobblemonSpawns.sendStopBoundingBoxToClient(player);
                                                 //context.getSource().sendFeedback(Text.literal("Debug mode disabled."), true);
                                             } else {
                                                 // Enable debug mode
@@ -426,40 +428,9 @@ public class AreaCommands
         int maxY = Math.max(minPos.getY(), maxPos.getY());
         int maxZ = Math.max(minPos.getZ(), maxPos.getZ());
 
-        // Initialize the player's tick counter if not present
-        playerTickCounters.putIfAbsent(playerId, 0);
-
-        // Register a server tick event
-        ServerTickEvents.END_SERVER_TICK.register(server -> {
-            // Ensure the world matches
-            if (!world.getServer().getWorld(world.getRegistryKey()).equals(world)) return;
-
-            // Check if the player is still in debug mode
-            if (!debugPlayers.contains(playerId)) {
-                playerTickCounters.remove(playerId); // Remove the tick counter for this player
-                return;
-            }
-
-            // Increment and check tick counter
-            int currentTick = playerTickCounters.get(playerId);
-            if (currentTick >= PARTICLE_TICK_RATE) {
-                playerTickCounters.put(playerId, 0); // Reset counter
-
-                // Spawn particles at the edges
-                for (int x = minX; x <= maxX; x += 2) {
-                    for (int y = minY; y <= maxY; y += 2) {
-                        for (int z = minZ; z <= maxZ; z += 2) {
-                            if (isEdge(new BlockPos(minX, minY, minZ), new BlockPos(maxX, maxY, maxZ), x, y, z)) {
-                                world.spawnParticles(ParticleTypes.END_ROD, x + 0.5, y + 0.5, z + 0.5, 1, 0, 0, 0, 0);
-                            }
-                        }
-                    }
-                }
-            } else {
-                // Increment counter
-                playerTickCounters.put(playerId, currentTick + 1);
-            }
-        });
+        PlayerManager playerManager = world.getServer().getPlayerManager();
+        ServerPlayerEntity sPlayer = playerManager.getPlayer(playerId);
+        CobblemonSpawns.sendStartBoundingBoxToClient(sPlayer, minPos, maxPos);
     }
 
 

@@ -3,7 +3,10 @@ package com.bloodfall.cobblemonspawns;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import net.fabricmc.fabric.api.networking.v1.PacketByteBufs;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
+import net.minecraft.network.PacketByteBuf;
+import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.BlockPos;
@@ -20,6 +23,8 @@ public class CobblemonSpawns implements ModInitializer {
     public static final String MOD_ID = "cobblemonspawns";
     public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
 
+    public static final Identifier START_BOUNDING_BOX_PACKET_ID = new Identifier("cobblemonspawns", "start_bounding_box");
+    public static final Identifier STOP_BOUNDING_BOX_PACKET_ID = new Identifier("cobblemonspawns", "stop_bounding_box");
 
 
     @Override
@@ -76,5 +81,17 @@ public class CobblemonSpawns implements ModInitializer {
             });
         });
 
+    }
+
+    public static void sendStartBoundingBoxToClient(ServerPlayerEntity player, BlockPos minPos, BlockPos maxPos) {
+        PacketByteBuf buf = PacketByteBufs.create();
+        buf.writeBlockPos(minPos);
+        buf.writeBlockPos(maxPos);
+        ServerPlayNetworking.send(player, START_BOUNDING_BOX_PACKET_ID, buf);
+    }
+
+    public static void sendStopBoundingBoxToClient(ServerPlayerEntity player) {
+        PacketByteBuf buf = PacketByteBufs.create();
+        ServerPlayNetworking.send(player, STOP_BOUNDING_BOX_PACKET_ID, buf);
     }
 }
