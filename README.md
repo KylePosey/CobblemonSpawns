@@ -5,7 +5,7 @@
 This mod integrates with Cobblemon to allow map makers and server admins to set up "tall grass" areas and configure which Pokémon can spawn, along with their attributes like level and spawn chance! For best results, use `/gamerule doPokemonSpawn false`.
 
 ## 🛠️ Install
-Visit [Cobblemon Spawns on CurseForge](https://curseforge.com/minecraft/mc-mods/cobblemon-spawns) to download the mod.
+Visit [Cobblemon Spawns on CurseForge](https://curseforge.com/minecraft/mc-mods/cobblemon-spawns) to download and install the mod.
 
 ## 🚨 Disclaimer
 
