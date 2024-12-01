@@ -38,6 +38,7 @@ repositories {
 		name = 'Cobblemon'
 		url = 'https://dl.cloudsmith.io/public/cobblemon/cobblemon/maven/'
 	}
+	maven { url 'https://maven.wispforest.io/releases/' }
 }
 
 loom {
@@ -56,6 +57,9 @@ dependencies {
 	modImplementation("curse.maven:cobblemon-fabric-687131:5375408")
 
 	modImplementation("curse.maven:architectury-api-419699:4555749")
+
+	modImplementation "io.wispforest:owo-lib:0.11.2+1.20"
+	include "io.wispforest:owo-sentinel:0.11.2+1.20"
 }
 
 

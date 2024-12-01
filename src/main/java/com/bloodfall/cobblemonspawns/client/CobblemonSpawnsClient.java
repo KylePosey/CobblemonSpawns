@@ -1,12 +1,10 @@
 package com.bloodfall.cobblemonspawns.client;
 
-import com.bloodfall.cobblemonspawns.Area;
-import com.bloodfall.cobblemonspawns.AreaManager;
-import com.bloodfall.cobblemonspawns.CobblemonSpawns;
-import com.bloodfall.cobblemonspawns.CobblemonSpawnsConfig;
+import com.bloodfall.cobblemonspawns.*;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents;
+import net.fabricmc.fabric.api.client.screenhandler.v1.ScreenRegistry;
 import net.minecraft.network.PacketByteBuf;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.BlockPos;
@@ -17,10 +15,19 @@ import java.util.UUID;
 
 public class CobblemonSpawnsClient implements ClientModInitializer {
 
-    public static final Identifier OPEN_AREA_GUI = new Identifier("cobblemonspawns", "open_area_gui");
-
     @Override
-    public void onInitializeClient() {
+    public void onInitializeClient()
+    {
+        ClientPlayNetworking.registerGlobalReceiver(CobblemonSpawns.OPEN_AREA_GUI_PACKET_ID, (client, handler, buf, responseSender) -> {
+            // Deserialize areas
+            List<Area> areas = deserializeAreas(buf);
+
+            // Open the GUI on the client thread
+            client.execute(() -> {
+                client.setScreen(new AreaManagementScreen(areas));
+            });
+        });
+
         ClientPlayNetworking.registerGlobalReceiver(CobblemonSpawns.START_BOUNDING_BOX_PACKET_ID, (client, handler, buf, responseSender) -> {
             BlockPos minPos = buf.readBlockPos();
             BlockPos maxPos = buf.readBlockPos();
@@ -35,5 +42,19 @@ public class CobblemonSpawnsClient implements ClientModInitializer {
         });
 
         WorldRenderEvents.BEFORE_DEBUG_RENDER.register(BoundingBoxRenderer::render);
+    }
+
+    private List<Area> deserializeAreas(PacketByteBuf buf) {
+        int areaCount = buf.readInt();
+        List<Area> areas = new ArrayList<>();
+        for (int i = 0; i < areaCount; i++) {
+            UUID id = buf.readUuid();
+            String name = buf.readString(32767);
+            BlockPos minPos = buf.readBlockPos();
+            BlockPos maxPos = buf.readBlockPos();
+            Area area = new Area(id, name, minPos, maxPos);
+            areas.add(area);
+        }
+        return areas;
     }
 }

@@ -1,33 +1,18 @@
 package com.bloodfall.cobblemonspawns;
 
-import com.bloodfall.cobblemonspawns.Area;
-import com.bloodfall.cobblemonspawns.CobblemonSpawnsConfig;
-import com.bloodfall.cobblemonspawns.AreaManager;
-import com.bloodfall.cobblemonspawns.SelectionManager; // Ensure this import exists
-import com.bloodfall.cobblemonspawns.client.CobblemonSpawnsClient;
 import com.mojang.brigadier.CommandDispatcher;
-import com.mojang.brigadier.ParseResults;
-import com.mojang.brigadier.StringReader;
 import com.mojang.brigadier.arguments.DoubleArgumentType;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
-import com.mojang.brigadier.exceptions.CommandSyntaxException;
-import com.sun.jna.WString;
-import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.networking.v1.PacketByteBufs;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
+import net.fabricmc.fabric.api.screenhandler.v1.ExtendedScreenHandlerFactory;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
-import net.minecraft.entity.MarkerEntity;
 import net.minecraft.entity.decoration.ArmorStandEntity;
-import net.minecraft.entity.decoration.DisplayEntity;
 import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.entity.player.PlayerInventory;
 import net.minecraft.network.PacketByteBuf;
-import net.minecraft.network.message.MessageType;
-import net.minecraft.network.message.SentMessage;
-import net.minecraft.particle.ParticleTypes;
-import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.PlayerManager;
 import net.minecraft.server.command.CommandManager;
 import net.minecraft.server.command.ServerCommandSource;
@@ -39,7 +24,6 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
 
 import java.util.*;
-import java.util.function.Supplier;
 
 public class AreaCommands
 {
@@ -406,8 +390,29 @@ public class AreaCommands
                                             return 1;
                                         })
                         )
+                        .then(
+                                CommandManager.literal("gui")
+                                        .executes(context -> {
+                                            ServerPlayerEntity player = context.getSource().getPlayer();
+                                            if (player != null) {
+                                                // Get the list of areas
+                                                ServerWorld world = (ServerWorld) player.getWorld();
+                                                AreaManager manager = AreaManager.get(world);
+                                                Collection<Area> areas = manager.getAllAreas();
+
+                                                // Serialize areas into the buffer
+                                                PacketByteBuf buf = PacketByteBufs.create();
+                                                serializeAreas(buf, areas);
+
+                                                // Send the packet to the client
+                                                ServerPlayNetworking.send(player, CobblemonSpawns.OPEN_AREA_GUI_PACKET_ID, buf);
+                                            }
+                                            return 1;
+                                        })
+                        )
         );
     }
+
     private static void debugArea(ServerWorld world, Area area, UUID playerId) {
         BlockPos minPos = area.getMinPos();
         BlockPos maxPos = area.getMaxPos();
@@ -433,8 +438,6 @@ public class AreaCommands
         CobblemonSpawns.sendStartBoundingBoxToClient(sPlayer, minPos, maxPos);
     }
 
-
-
     private static void createFloatingText(ServerWorld world, Area area) {
         BlockPos minPos = area.getMinPos();
         BlockPos maxPos = area.getMaxPos();
@@ -453,8 +456,6 @@ public class AreaCommands
             createArmorStandText(center, c.getY() - (index), world, area, s);
             index++;
         }
-
-
     }
 
     private static void createArmorStandText(BlockPos center, int y, ServerWorld world, Area area, String text)
@@ -491,24 +492,13 @@ public class AreaCommands
                 || z == minPos.getZ() || z == maxPos.getZ();
     }
 
-
-    private static PacketByteBuf serializeAreas(Collection<Area> areas) {
-        PacketByteBuf buf = PacketByteBufs.create();
+    private static void serializeAreas(PacketByteBuf buf, Collection<Area> areas) {
         buf.writeInt(areas.size());
         for (Area area : areas) {
             buf.writeUuid(area.getId());
             buf.writeString(area.getName());
             buf.writeBlockPos(area.getMinPos());
             buf.writeBlockPos(area.getMaxPos());
-            buf.writeInt(area.getSpawnConfigs().size());
-            for (CobblemonSpawnsConfig config : area.getSpawnConfigs()) {
-                buf.writeString(config.getCobblemonName());
-                buf.writeDouble(config.getSpawnRate());
-                buf.writeInt(config.getMinLevel());
-                buf.writeInt(config.getMaxLevel());
-            }
         }
-        return buf;
     }
-
 }
