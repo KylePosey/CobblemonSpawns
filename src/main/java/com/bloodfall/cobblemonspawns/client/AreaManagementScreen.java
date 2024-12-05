@@ -1,6 +1,8 @@
 package com.bloodfall.cobblemonspawns.client;
 
 import com.bloodfall.cobblemonspawns.Area;
+import com.bloodfall.cobblemonspawns.AreaCommands;
+import com.bloodfall.cobblemonspawns.CobblemonSpawns;
 import io.wispforest.owo.ui.base.BaseOwoScreen;
 import io.wispforest.owo.ui.component.*;
 import io.wispforest.owo.ui.container.Containers;
@@ -9,7 +11,10 @@ import io.wispforest.owo.ui.core.*;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.fabricmc.fabric.api.networking.v1.PacketByteBufs;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.network.PacketByteBuf;
+import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.world.ServerWorld;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.BlockPos;
@@ -176,6 +181,14 @@ public class AreaManagementScreen extends BaseOwoScreen<FlowLayout> {
         refreshDetailsLayout();
     }
 
+    private void refreshDebugView() {
+        PacketByteBuf buf = PacketByteBufs.create();
+        // If you need to send additional data, write it to buf here
+        // For example, you might send the area ID or coordinates
+
+        ClientPlayNetworking.send(CobblemonSpawns.REFRESH_DEBUG_VIEW_PACKET, buf);
+    }
+
     private void saveArea() {
         if (selectedArea != null) {
             // Get values from input fields
@@ -205,11 +218,11 @@ public class AreaManagementScreen extends BaseOwoScreen<FlowLayout> {
                 return;
             }
 
-            // Validate positions
-            if (newMinPos.getX() > newMaxPos.getX() || newMinPos.getY() > newMaxPos.getY() || newMinPos.getZ() > newMaxPos.getZ()) {
-                showError("Min position must be less than or equal to max position.");
-                return;
-            }
+            //TODO: Check if this is necessary
+            //if (newMinPos.getX() > newMaxPos.getX() || newMinPos.getY() > newMaxPos.getY() || newMinPos.getZ() > newMaxPos.getZ()) {
+                //showError("Min position must be less than or equal to max position.");
+                //return;
+            //}
 
             // Update the selectedArea object
             selectedArea.setName(newName);
@@ -228,6 +241,8 @@ public class AreaManagementScreen extends BaseOwoScreen<FlowLayout> {
             isEditing = false;
             refreshDetailsLayout();
             updateAreaList();
+
+            refreshDebugView();
         }
     }
 
