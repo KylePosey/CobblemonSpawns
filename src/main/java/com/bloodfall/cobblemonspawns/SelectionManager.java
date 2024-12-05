@@ -2,82 +2,71 @@ package com.bloodfall.cobblemonspawns;
 
 import net.minecraft.util.math.BlockPos;
 
-import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
-/**
- * Manages area selections for players using the AreaSelectionTool.
- */
 public class SelectionManager {
-    private static final Map<UUID, SelectionData> playerSelections = new HashMap<>();
 
-    /**
-     * Sets the first point for a player's area selection.
-     *
-     * @param playerId The UUID of the player.
-     * @param pos      The BlockPos selected by the player.
-     */
-    public static void setFirstPoint(UUID playerId, BlockPos pos) {
-        SelectionData data = playerSelections.getOrDefault(playerId, new SelectionData());
-        data.setFirstPos(pos);
-        playerSelections.put(playerId, data);
-    }
+    private static final Map<UUID, SelectionData> selections = new ConcurrentHashMap<>();
 
-    /**
-     * Sets the second point for a player's area selection.
-     *
-     * @param playerId The UUID of the player.
-     * @param pos      The BlockPos selected by the player.
-     */
-    public static void setSecondPoint(UUID playerId, BlockPos pos) {
-        SelectionData data = playerSelections.getOrDefault(playerId, new SelectionData());
-        data.setSecondPos(pos);
-        playerSelections.put(playerId, data);
-    }
-
-    /**
-     * Retrieves and removes the selection data for a player.
-     *
-     * @param playerId The UUID of the player.
-     * @return The SelectionData containing both points, or null if incomplete.
-     */
-    public static SelectionData consumeSelection(UUID playerId) {
-        return playerSelections.remove(playerId);
-    }
-
-    /**
-     * Checks if a player has both points selected.
-     *
-     * @param playerId The UUID of the player.
-     * @return True if both points are set, false otherwise.
-     */
-    public static boolean hasCompleteSelection(UUID playerId) {
-        SelectionData data = playerSelections.get(playerId);
-        return data != null && data.getFirstPos() != null && data.getSecondPos() != null;
-    }
-
-    /**
-     * Inner class to hold selection data.
-     */
     public static class SelectionData {
         private BlockPos firstPos;
         private BlockPos secondPos;
+
+        public SelectionData(BlockPos firstPos) {
+            this.firstPos = firstPos;
+        }
 
         public BlockPos getFirstPos() {
             return firstPos;
         }
 
-        public void setFirstPos(BlockPos firstPos) {
-            this.firstPos = firstPos;
+        public void setSecondPos(BlockPos secondPos) {
+            this.secondPos = secondPos;
         }
 
         public BlockPos getSecondPos() {
             return secondPos;
         }
 
-        public void setSecondPos(BlockPos secondPos) {
-            this.secondPos = secondPos;
+        public boolean isComplete() {
+            return firstPos != null && secondPos != null;
         }
+    }
+
+    public static boolean hasCompleteFirstPoint(UUID playerId) {
+        SelectionData data = selections.get(playerId);
+        return data != null && data.getFirstPos() != null;
+    }
+
+    public static boolean hasCompleteSelection(UUID playerId) {
+        SelectionData data = selections.get(playerId);
+        return data != null && data.isComplete();
+    }
+
+    public static void setFirstPoint(UUID playerId, BlockPos pos) {
+        selections.put(playerId, new SelectionData(pos));
+        CobblemonSpawns.LOGGER.info("Player {} set first point at {}", playerId, pos);
+    }
+
+    public static void setSecondPoint(UUID playerId, BlockPos pos) {
+        SelectionData data = selections.get(playerId);
+        if (data != null) {
+            data.setSecondPos(pos);
+            CobblemonSpawns.LOGGER.info("Player {} set second point at {}", playerId, pos);
+        } else {
+            CobblemonSpawns.LOGGER.warn("Player {} attempted to set second point without a first point.", playerId);
+        }
+    }
+
+    public static SelectionData consumeSelection(UUID playerId) {
+        SelectionData data = selections.remove(playerId);
+        if (data != null) {
+            CobblemonSpawns.LOGGER.info("Player {} consumed selection: First Pos {}, Second Pos {}", playerId, data.getFirstPos(), data.getSecondPos());
+        } else {
+            CobblemonSpawns.LOGGER.warn("Player {} attempted to consume selection but none was found.", playerId);
+        }
+        return data;
     }
 }

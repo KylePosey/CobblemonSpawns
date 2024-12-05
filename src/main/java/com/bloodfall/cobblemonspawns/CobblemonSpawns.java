@@ -7,7 +7,9 @@ import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.networking.v1.PacketByteBufs;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
+import net.minecraft.client.MinecraftClient;
 import net.minecraft.network.PacketByteBuf;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.text.Text;
@@ -32,6 +34,10 @@ public class CobblemonSpawns implements ModInitializer {
     public static final Identifier DELETE_AREA_PACKET_ID = new Identifier(MOD_ID, "delete_area");
     public static final Identifier UPDATE_AREA_PACKET_ID = new Identifier(MOD_ID, "update_area");
     public static final Identifier OPEN_AREA_GUI_PACKET_ID = new Identifier(MOD_ID, "open_area_gui");
+
+    public static final Identifier REFRESH_DEBUG_VIEW_PACKET = new Identifier(MOD_ID, "refresh_debug_view");
+
+    public static ServerWorld sWorld;
 
     @Override
     public void onInitialize()
@@ -59,6 +65,7 @@ public class CobblemonSpawns implements ModInitializer {
 
             server.execute(() -> {
                 if (player.getWorld() instanceof ServerWorld serverWorld) {
+                    sWorld = serverWorld;
                     AreaManager manager = AreaManager.get(serverWorld);
                     Area area = manager.getArea(areaId);
 
@@ -131,6 +138,19 @@ public class CobblemonSpawns implements ModInitializer {
                 } else {
                     player.sendMessage(Text.literal("Area not found."), false);
                 }
+            });
+        });
+
+        ServerPlayNetworking.registerGlobalReceiver(CobblemonSpawns.REFRESH_DEBUG_VIEW_PACKET, (server, player, handler, buf, responseSender) -> {
+            // Handle the packet on the server thread
+            server.execute(() -> {
+                // Retrieve any additional data from buf if sent
+                // For example:
+                // UUID areaId = buf.readUuid();
+                // BlockPos pos = buf.readBlockPos();
+
+                // Perform the refreshDebugView action
+                AreaCommands.refreshDebugView(server.getOverworld(), player);
             });
         });
     }

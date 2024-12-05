@@ -20,13 +20,15 @@ import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
+import net.minecraft.util.Identifier;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
-
 import java.util.*;
 
 public class AreaCommands
 {
+    private static final Identifier REFRESH_DEBUG_VIEW_PACKET_ID = new Identifier("cobblemonspawns", "refresh_debug_view");
+
     private static final Set<UUID> debugPlayers = new HashSet<>();
     private static final Map<UUID, List<UUID>> debugEntities = new HashMap<>();
 
@@ -68,6 +70,8 @@ public class AreaCommands
                                                                 // Create and add the area
                                                                 Area area = new Area(name, minPos, maxPos);
                                                                 manager.addArea(area);
+
+                                                                refreshDebugView((ServerWorld) player.getWorld(), player);
 
                                                                 source.sendFeedback(() -> Text.literal("Area '" + name + "' added successfully using selected points."), true);
                                                                 return 1;
@@ -124,6 +128,8 @@ public class AreaCommands
                                                                                                                                                             Area area = new Area(name, minPos, maxPos);
                                                                                                                                                             manager.addArea(area);
 
+                                                                                                                                                            refreshDebugView((ServerWorld) player.getWorld(), player);
+
                                                                                                                                                             source.sendFeedback(() -> Text.literal("Area '" + name + "' added successfully with specified coordinates."), true);
                                                                                                                                                             return 1;
                                                                                                                                                         })
@@ -163,6 +169,9 @@ public class AreaCommands
 
                                                             manager.removeArea(areaToRemove.getId());
                                                             source.sendFeedback(() -> Text.literal("Area '" + name + "' removed successfully."), true);
+
+                                                            refreshDebugView((ServerWorld) player.getWorld(), player);
+
                                                             return 1;
                                                         })
                                         )
@@ -257,6 +266,8 @@ public class AreaCommands
                                                                                                                             targetArea.addSpawnConfig(spawnConfig);
                                                                                                                             manager.markDirty();
 
+                                                                                                                            refreshDebugView((ServerWorld) player.getWorld(), player);
+
                                                                                                                             source.sendFeedback(() -> Text.literal("Pokémon '" + pokemonName + "' added to area '" + areaName + "'."), true);
                                                                                                                             return 1;
                                                                                                                         })
@@ -308,6 +319,8 @@ public class AreaCommands
 
                                                                             targetArea.removeSpawnConfig(spawnConfig);
                                                                             manager.markDirty();
+
+                                                                            refreshDebugView((ServerWorld) player.getWorld(), player);
 
                                                                             source.sendFeedback(() -> Text.literal("Pokémon '" + pokemonName + "' removed from area '" + areaName + "'."), true);
                                                                             return 1;
@@ -417,13 +430,13 @@ public class AreaCommands
         BlockPos minPos = area.getMinPos();
         BlockPos maxPos = area.getMaxPos();
         createFloatingText(world, area);
-        spawnPersistentParticles(world, minPos, maxPos, playerId);
+        spawnBoundaryLines(world, minPos, maxPos, playerId);
     }
 
     private static final int PARTICLE_TICK_RATE = 20; // Spawn particles every 10 ticks
     private static final Map<UUID, Integer> playerTickCounters = new HashMap<>();
 
-    private static void spawnPersistentParticles(ServerWorld world, BlockPos minPos, BlockPos maxPos, UUID playerId) {
+    private static void spawnBoundaryLines(ServerWorld world, BlockPos minPos, BlockPos maxPos, UUID playerId) {
         // Normalize bounds
         int minX = Math.min(minPos.getX(), maxPos.getX());
         int minY = Math.min(minPos.getY(), maxPos.getY());
@@ -470,6 +483,60 @@ public class AreaCommands
         marker.addCommandTag("debug_area");
         world.spawnEntity(marker);
     }
+
+    public static void refreshDebugView(ServerWorld world, ServerPlayerEntity serverPlayer)
+    {
+        for (UUID playerId : debugPlayers) {
+            ServerPlayerEntity player = Objects.requireNonNull(world.getServer()).getPlayerManager().getPlayer(playerId);
+            if (player != null) {
+                // Send stop bounding box to clear existing visuals
+                removeDebugEntities(serverPlayer);
+                CobblemonSpawns.sendStopBoundingBoxToClient(player);
+
+                // For each area, create the debug visuals for the player
+                for (Area area : AreaManager.get(world).getAllAreas()) {
+                    debugArea(world, area, playerId);
+                }
+            }
+        }
+    }
+
+    /*public static void refreshPacketDebugView(ServerWorld world, ServerPlayerEntity serverPlayer)
+    {
+        for (UUID playerId : debugPlayers) {
+            ServerPlayerEntity player = Objects.requireNonNull(world.getServer()).getPlayerManager().getPlayer(playerId);
+            if (player != null) {
+                // Send stop bounding box to clear existing visuals
+                removeDebugEntities(serverPlayer);
+                CobblemonSpawns.sendStopBoundingBoxToClient(player);
+
+                // For each area, create the debug visuals for the player
+                for (Area area : AreaManager.get(world).getAllAreas()) {
+                    debugArea(world, area, playerId);
+                }
+            }
+        }
+
+        PacketByteBuf buf = PacketByteBufs.create();
+
+        // Example: Send a simple acknowledgment
+        buf.writeString("Refresh successful");
+
+        ServerPlayNetworking.send(serverPlayer, new Identifier("cobblemonspawns", "refresh_acknowledgment"), buf);
+    }*/
+
+    /*private static void removeAllDebugEntities(ServerPlayerEntity player) {
+        World world = player.getWorld();
+        if (!(world instanceof ServerWorld serverWorld)) return;
+
+        List<? extends ArmorStandEntity> allArmorStands = serverWorld.getEntitiesByType(
+                EntityType.ARMOR_STAND,
+                armorStand -> armorStand.getCommandTags().contains("debug_area")
+        );
+        for (ArmorStandEntity armorStand : allArmorStands) {
+            armorStand.remove(Entity.RemovalReason.DISCARDED);
+        }
+    }*/
 
     private static void removeDebugEntities(ServerPlayerEntity player) {
         World world = player.getWorld();
