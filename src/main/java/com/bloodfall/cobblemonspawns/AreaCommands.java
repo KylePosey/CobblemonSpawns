@@ -20,13 +20,15 @@ import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
+import net.minecraft.util.Identifier;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
-
 import java.util.*;
 
 public class AreaCommands
 {
+    private static final Identifier REFRESH_DEBUG_VIEW_PACKET_ID = new Identifier("cobblemonspawns", "refresh_debug_view");
+
     private static final Set<UUID> debugPlayers = new HashSet<>();
     private static final Map<UUID, List<UUID>> debugEntities = new HashMap<>();
 

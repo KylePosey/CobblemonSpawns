@@ -11,7 +11,7 @@ import net.minecraft.util.Identifier;
 import com.bloodfall.cobblemonspawns.CobblemonSpawns;
 
 public class ModItems {
-    public static final Item AREA_SELECTION_TOOL = registerItem("area_selection_tool", new Item(new FabricItemSettings()));
+    public static final Item AREA_SELECTION_TOOL = registerItem("area_selection_tool", new AreaSelectionTool(new Item.Settings().maxCount(1)));
 
     private static void addToToolGroup(FabricItemGroupEntries entries)
     {
