@@ -1,6 +1,7 @@
 package com.bloodfall.cobblemonspawns;
 
 import com.bloodfall.cobblemonspawns.client.AreaManagementScreen;
+import com.bloodfall.cobblemonspawns.client.CobblemonSpawnsClient;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
@@ -19,6 +20,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 
@@ -36,6 +38,8 @@ public class CobblemonSpawns implements ModInitializer {
     public static final Identifier STOP_BOUNDING_BOX_PACKET_ID = new Identifier("cobblemonspawns", "stop_bounding_box");
     public static final Identifier FLOATING_TEXT_PACKET_ID = new Identifier(MOD_ID, "floating_text");
     public static final Identifier CLEAR_FLOATING_TEXT_PACKET_ID = new Identifier(MOD_ID, "clear_floating_text");
+    public static final Identifier KEYBIND_TOGGLE_DEBUG_VIEW_PACKET_ID = new Identifier("cobblemonspawns", "toggle_debug_view");
+
 
     public static ServerWorld sWorld;
 
@@ -154,10 +158,65 @@ public class CobblemonSpawns implements ModInitializer {
 
         ServerPlayNetworking.registerGlobalReceiver(CLEAR_FLOATING_TEXT_PACKET_ID, (server, player, handler, buf, responseSender) -> {
             server.execute(() -> {
-                // You can handle additional logic here if needed
-                // For now, it's just a signal to the client to clear texts
+
             });
         });
+
+        ServerPlayNetworking.registerGlobalReceiver(CobblemonSpawnsClient.REQUEST_GUI_PACKET_PACKET_ID, (server, player, handler, buf, responseSender) -> {
+            server.execute(() -> {
+                if (player != null) {
+                    // Get the list of areas
+                    ServerWorld world = (ServerWorld) player.getWorld();
+                    AreaManager manager = AreaManager.get(world);
+                    Collection<Area> areas = manager.getAllAreas();
+
+                    // Serialize areas into the buffer
+                    PacketByteBuf b = PacketByteBufs.create();
+                    serializeAreas(b, areas);
+
+                    // Send the packet to the client
+                    ServerPlayNetworking.send(player, CobblemonSpawns.OPEN_AREA_GUI_PACKET_ID, b);
+                }
+            });
+        });
+    }
+
+    private static void serializeAreas(PacketByteBuf buf, Collection<Area> areas) {
+        buf.writeInt(areas.size());
+        for (Area area : areas) {
+            buf.writeUuid(area.getId());
+            buf.writeString(area.getName());
+            buf.writeBlockPos(area.getMinPos());
+            buf.writeBlockPos(area.getMaxPos());
+        }
+    }
+
+    private void sendFloatingTexts(ServerPlayerEntity player) {
+        ServerWorld world = (ServerWorld) player.getWorld();
+        Collection<Area> areas = AreaManager.get(world).getAllAreas();
+        PacketByteBuf buf = PacketByteBufs.create();
+        buf.writeInt(areas.size());
+
+        for (Area area : areas) {
+            buf.writeString(area.getName());
+
+            BlockPos center = new BlockPos(
+                    (area.getMinPos().getX() + area.getMaxPos().getX()) / 2,
+                    (area.getMinPos().getY() + area.getMaxPos().getY()) / 2 + 2, // Slightly above the center
+                    (area.getMinPos().getZ() + area.getMaxPos().getZ()) / 2
+            );
+            buf.writeBlockPos(center);
+
+            buf.writeInt(area.getSpawnConfigs().size());
+            for (CobblemonSpawnsConfig config : area.getSpawnConfigs()) {
+                buf.writeString(config.getCobblemonName());
+                buf.writeInt(config.getMinLevel());
+                buf.writeInt(config.getMaxLevel());
+                buf.writeDouble(config.getSpawnRate());
+            }
+        }
+
+        ServerPlayNetworking.send(player, FLOATING_TEXT_PACKET_ID, buf);
     }
 
     public static void sendStartBoundingBoxToClient(ServerPlayerEntity player, BlockPos minPos, BlockPos maxPos) {
