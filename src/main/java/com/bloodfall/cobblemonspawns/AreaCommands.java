@@ -28,9 +28,9 @@ import java.util.*;
 public class AreaCommands
 {
     private static final Identifier FLOATING_TEXT_PACKET_ID = new Identifier("cobblemonspawns", "floating_text");
+    private static final Identifier CLEAR_FLOATING_TEXT_PACKET_ID = new Identifier("cobblemonspawns", "clear_floating_text");
 
     private static final Set<UUID> debugPlayers = new HashSet<>();
-    private static final Map<UUID, List<UUID>> debugEntities = new HashMap<>();
 
     public static void register(CommandDispatcher<ServerCommandSource> dispatcher) {
         dispatcher.register(
@@ -384,15 +384,12 @@ public class AreaCommands
                                             AreaManager manager = AreaManager.get(world);
 
                                             if (debugPlayers.contains(playerId)) {
-                                                // Disable debug mode
                                                 debugPlayers.remove(playerId);
-                                                playerTickCounters.remove(playerId);
-                                                removeDebugEntities(player);
+                                                //playerTickCounters.remove(playerId);
                                                 CobblemonSpawns.sendStopBoundingBoxToClient(player);
                                                 sendClearFloatingTextToClient(player);
                                                 //context.getSource().sendFeedback(Text.literal("Debug mode disabled."), true);
                                             } else {
-                                                // Enable debug mode
                                                 debugPlayers.add(playerId);
 
                                                 for (Area area : manager.getAllAreas()) {
@@ -427,17 +424,35 @@ public class AreaCommands
                                         })
                         )
         );
+
+        ServerPlayNetworking.registerGlobalReceiver(CobblemonSpawns.KEYBIND_TOGGLE_DEBUG_VIEW_PACKET_ID, (server, player, handler, buf, responseSender) -> {
+            server.execute(() -> {
+                UUID playerId = player.getUuid();
+                ServerWorld world = (ServerWorld) player.getWorld();
+                AreaManager manager = AreaManager.get(world);
+
+                if (debugPlayers.contains(playerId)) {
+                    debugPlayers.remove(playerId);
+                    CobblemonSpawns.sendStopBoundingBoxToClient(player);
+                    sendClearFloatingTextToClient(player);
+                } else {
+                    debugPlayers.add(playerId);
+
+                    for (Area area : manager.getAllAreas()) {
+                        debugArea(world, area, playerId);
+                    }
+
+                    sendFloatingTexts(world, player);
+                }
+            });
+        });
     }
 
     private static void debugArea(ServerWorld world, Area area, UUID playerId) {
         BlockPos minPos = area.getMinPos();
         BlockPos maxPos = area.getMaxPos();
-        //createFloatingText(world, area);
         spawnBoundaryLines(world, minPos, maxPos, playerId);
     }
-
-    private static final int PARTICLE_TICK_RATE = 20; // Spawn particles every 10 ticks
-    private static final Map<UUID, Integer> playerTickCounters = new HashMap<>();
 
     private static void spawnBoundaryLines(ServerWorld world, BlockPos minPos, BlockPos maxPos, UUID playerId) {
         // Normalize bounds
@@ -449,9 +464,14 @@ public class AreaCommands
         int maxY = Math.max(minPos.getY(), maxPos.getY());
         int maxZ = Math.max(minPos.getZ(), maxPos.getZ());
 
-        PlayerManager playerManager = world.getServer().getPlayerManager();
+        /*PlayerManager playerManager = world.getServer().getPlayerManager();
         ServerPlayerEntity sPlayer = playerManager.getPlayer(playerId);
-        CobblemonSpawns.sendStartBoundingBoxToClient(sPlayer, minPos, maxPos);
+        CobblemonSpawns.sendStartBoundingBoxToClient(sPlayer, minPos, maxPos);*/
+
+        ServerPlayerEntity player = world.getServer().getPlayerManager().getPlayer(playerId);
+        if (player != null) {
+            CobblemonSpawns.sendStartBoundingBoxToClient(player, minPos, maxPos);
+        }
     }
 
     /*private static void createFloatingText(ServerWorld world, Area area) {
@@ -525,13 +545,14 @@ public class AreaCommands
             ServerPlayerEntity player = Objects.requireNonNull(world.getServer()).getPlayerManager().getPlayer(playerId);
             if (player != null) {
                 // Send stop bounding box to clear existing visuals
-                removeDebugEntities(serverPlayer);
                 CobblemonSpawns.sendStopBoundingBoxToClient(player);
-
+                sendClearFloatingTextToClient(player);
                 // For each area, create the debug visuals for the player
                 for (Area area : AreaManager.get(world).getAllAreas()) {
                     debugArea(world, area, playerId);
                 }
+
+                sendFloatingTexts(world, player);
             }
         }
     }
@@ -572,21 +593,6 @@ public class AreaCommands
             armorStand.remove(Entity.RemovalReason.DISCARDED);
         }
     }*/
-
-    private static void removeDebugEntities(ServerPlayerEntity player) {
-        World world = player.getWorld();
-        if (!(world instanceof ServerWorld serverWorld)) return;
-
-        List<? extends  ArmorStandEntity> allArmorStands = serverWorld.getEntitiesByType(
-                EntityType.ARMOR_STAND,
-                armorStand -> armorStand.getCommandTags().contains("debug_area")
-        );
-
-        for (ArmorStandEntity armorStand : allArmorStands) {
-            //CobblemonSpawns.LOGGER.info("Removing persistent debug armor stand: {}", armorStand.getUuid());
-            armorStand.remove(Entity.RemovalReason.DISCARDED);
-        }
-    }
 
     private static boolean isEdge(BlockPos minPos, BlockPos maxPos, int x, int y, int z) {
         return x == minPos.getX() || x == maxPos.getX()
