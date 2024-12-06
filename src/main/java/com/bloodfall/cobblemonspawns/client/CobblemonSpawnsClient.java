@@ -37,10 +37,22 @@ public class CobblemonSpawnsClient implements ClientModInitializer {
             });
         });
 
-        // Handler for stopping rendering
         ClientPlayNetworking.registerGlobalReceiver(CobblemonSpawns.STOP_BOUNDING_BOX_PACKET_ID, (client, handler, buf, responseSender) -> {
             client.execute(BoundingBoxRenderer::clearBoundingBoxes);
         });
+
+        ClientPlayNetworking.registerGlobalReceiver(CobblemonSpawns.FLOATING_TEXT_PACKET_ID, (client, handler, buf, responseSender) -> {
+            List<FloatingText> texts = deserializeFloatingTexts(buf);
+            client.execute(() -> {
+                FloatingTextRenderer.setFloatingTexts(texts);
+            });
+        });
+
+        ClientPlayNetworking.registerGlobalReceiver(CobblemonSpawns.CLEAR_FLOATING_TEXT_PACKET_ID, (client, handler, buf, responseSender) -> {
+            client.execute(FloatingTextRenderer::clearFloatingTexts);
+        });
+
+        WorldRenderEvents.BEFORE_DEBUG_RENDER.register(FloatingTextRenderer::render);
 
         WorldRenderEvents.BEFORE_DEBUG_RENDER.register(BoundingBoxRenderer::render);
     }
@@ -57,5 +69,34 @@ public class CobblemonSpawnsClient implements ClientModInitializer {
             areas.add(area);
         }
         return areas;
+    }
+
+    private List<FloatingText> deserializeFloatingTexts(PacketByteBuf buf) {
+        int areaCount = buf.readInt();
+        List<FloatingText> texts = new ArrayList<>();
+
+        for (int i = 0; i < areaCount; i++) {
+            String areaName = buf.readString(32767);
+            BlockPos center = buf.readBlockPos();
+            int spawnConfigCount = buf.readInt();
+
+            StringBuilder sb = new StringBuilder();
+            sb.append(areaName);
+
+            for (int j = 0; j < spawnConfigCount; j++) {
+                String pokemonName = buf.readString(32767);
+                int minLevel = buf.readInt();
+                int maxLevel = buf.readInt();
+                double spawnRate = buf.readDouble();
+
+                sb.append("\n").append(pokemonName)
+                        .append(" (").append(minLevel).append("-").append(maxLevel).append(")")
+                        .append(" | Rate: ").append(String.format("%.2f", spawnRate * 100)).append("%");
+            }
+
+            texts.add(new FloatingText(sb.toString(), center));
+        }
+
+        return texts;
     }
 }
