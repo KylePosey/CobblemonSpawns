@@ -38,7 +38,7 @@ public class BoundingBoxRenderer {
         VertexConsumer vertexConsumer = vertexConsumers.getBuffer(RenderLayer.getLines());
 
         for (Box box : boundingBoxes) {
-            drawBoxLines(matrices, vertexConsumer, box, 0.0F, 1.0F, 0.0F, 1.0F); // Red color
+            drawBoxLines(matrices, vertexConsumer, box, 1.0F, 1.0F, 1.0F, 1.0F);
         }
 
         matrices.pop();

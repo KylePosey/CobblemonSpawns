@@ -27,7 +27,7 @@ import java.util.*;
 
 public class AreaCommands
 {
-    private static final Identifier REFRESH_DEBUG_VIEW_PACKET_ID = new Identifier("cobblemonspawns", "refresh_debug_view");
+    private static final Identifier FLOATING_TEXT_PACKET_ID = new Identifier("cobblemonspawns", "floating_text");
 
     private static final Set<UUID> debugPlayers = new HashSet<>();
     private static final Map<UUID, List<UUID>> debugEntities = new HashMap<>();
@@ -389,6 +389,7 @@ public class AreaCommands
                                                 playerTickCounters.remove(playerId);
                                                 removeDebugEntities(player);
                                                 CobblemonSpawns.sendStopBoundingBoxToClient(player);
+                                                sendClearFloatingTextToClient(player);
                                                 //context.getSource().sendFeedback(Text.literal("Debug mode disabled."), true);
                                             } else {
                                                 // Enable debug mode
@@ -397,6 +398,8 @@ public class AreaCommands
                                                 for (Area area : manager.getAllAreas()) {
                                                     debugArea(world, area, playerId);
                                                 }
+
+                                                sendFloatingTexts(world, player);
 
                                                 //context.getSource().sendFeedback(Text.literal("Debug mode enabled."), true);
                                             }
@@ -429,7 +432,7 @@ public class AreaCommands
     private static void debugArea(ServerWorld world, Area area, UUID playerId) {
         BlockPos minPos = area.getMinPos();
         BlockPos maxPos = area.getMaxPos();
-        createFloatingText(world, area);
+        //createFloatingText(world, area);
         spawnBoundaryLines(world, minPos, maxPos, playerId);
     }
 
@@ -451,7 +454,7 @@ public class AreaCommands
         CobblemonSpawns.sendStartBoundingBoxToClient(sPlayer, minPos, maxPos);
     }
 
-    private static void createFloatingText(ServerWorld world, Area area) {
+    /*private static void createFloatingText(ServerWorld world, Area area) {
         BlockPos minPos = area.getMinPos();
         BlockPos maxPos = area.getMaxPos();
         BlockPos center = new BlockPos(
@@ -482,6 +485,38 @@ public class AreaCommands
         marker.setCustomNameVisible(true);
         marker.addCommandTag("debug_area");
         world.spawnEntity(marker);
+    }*/
+
+    private static void sendFloatingTexts(ServerWorld world, ServerPlayerEntity player) {
+        Collection<Area> areas = AreaManager.get(world).getAllAreas();
+        PacketByteBuf buf = PacketByteBufs.create();
+        buf.writeInt(areas.size());
+
+        for (Area area : areas) {
+            buf.writeString(area.getName());
+
+            BlockPos center = new BlockPos(
+                    (area.getMinPos().getX() + area.getMaxPos().getX()) / 2,
+                    (area.getMinPos().getY() + area.getMaxPos().getY()) / 2 + 2, // Slightly above the center
+                    (area.getMinPos().getZ() + area.getMaxPos().getZ()) / 2
+            );
+            buf.writeBlockPos(center);
+
+            buf.writeInt(area.getSpawnConfigs().size());
+            for (CobblemonSpawnsConfig config : area.getSpawnConfigs()) {
+                buf.writeString(config.getCobblemonName());
+                buf.writeInt(config.getMinLevel());
+                buf.writeInt(config.getMaxLevel());
+                buf.writeDouble(config.getSpawnRate());
+            }
+        }
+
+        ServerPlayNetworking.send(player, FLOATING_TEXT_PACKET_ID, buf);
+    }
+
+    private static void sendClearFloatingTextToClient(ServerPlayerEntity player) {
+        PacketByteBuf buf = PacketByteBufs.create();
+        ServerPlayNetworking.send(player, new Identifier("cobblemonspawns", "clear_floating_text"), buf);
     }
 
     public static void refreshDebugView(ServerWorld world, ServerPlayerEntity serverPlayer)

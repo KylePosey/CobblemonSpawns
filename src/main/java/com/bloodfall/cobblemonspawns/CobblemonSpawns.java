@@ -28,14 +28,14 @@ public class CobblemonSpawns implements ModInitializer {
     public static final String MOD_ID = "cobblemonspawns";
     public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
 
-    public static final Identifier START_BOUNDING_BOX_PACKET_ID = new Identifier("cobblemonspawns", "start_bounding_box");
-    public static final Identifier STOP_BOUNDING_BOX_PACKET_ID = new Identifier("cobblemonspawns", "stop_bounding_box");
-
     public static final Identifier DELETE_AREA_PACKET_ID = new Identifier(MOD_ID, "delete_area");
     public static final Identifier UPDATE_AREA_PACKET_ID = new Identifier(MOD_ID, "update_area");
     public static final Identifier OPEN_AREA_GUI_PACKET_ID = new Identifier(MOD_ID, "open_area_gui");
-
     public static final Identifier REFRESH_DEBUG_VIEW_PACKET = new Identifier(MOD_ID, "refresh_debug_view");
+    public static final Identifier START_BOUNDING_BOX_PACKET_ID = new Identifier("cobblemonspawns", "start_bounding_box");
+    public static final Identifier STOP_BOUNDING_BOX_PACKET_ID = new Identifier("cobblemonspawns", "stop_bounding_box");
+    public static final Identifier FLOATING_TEXT_PACKET_ID = new Identifier(MOD_ID, "floating_text");
+    public static final Identifier CLEAR_FLOATING_TEXT_PACKET_ID = new Identifier(MOD_ID, "clear_floating_text");
 
     public static ServerWorld sWorld;
 
@@ -44,12 +44,10 @@ public class CobblemonSpawns implements ModInitializer {
     {
         registerModItems();
 
-        // Register the /area commands
         CommandRegistrationCallback.EVENT.register((dispatcher, dedicated, environment) -> {
             AreaCommands.register(dispatcher);
         });
 
-        // Register player tick event for movement tracking
         ServerTickEvents.END_WORLD_TICK.register(world -> {
             if (!world.isClient()) {
                 AreaManager manager = AreaManager.get(world);
@@ -151,6 +149,13 @@ public class CobblemonSpawns implements ModInitializer {
 
                 // Perform the refreshDebugView action
                 AreaCommands.refreshDebugView(server.getOverworld(), player);
+            });
+        });
+
+        ServerPlayNetworking.registerGlobalReceiver(CLEAR_FLOATING_TEXT_PACKET_ID, (server, player, handler, buf, responseSender) -> {
+            server.execute(() -> {
+                // You can handle additional logic here if needed
+                // For now, it's just a signal to the client to clear texts
             });
         });
     }
