@@ -61,10 +61,11 @@ public class AreaSelectionTool extends Item {
                 LOGGER.info("Player {} set first point at {}", playerId, pos);
             } else {
                 // Set second point
-                SelectionManager.setSecondPoint(playerId, pos);
+                BlockPos yAdjustedPos = new BlockPos(pos.getX(), pos.getY() + 3, pos.getZ());
+                SelectionManager.setSecondPoint(playerId, yAdjustedPos);
                 player.sendMessage(Text.literal("Second point set at " + pos).formatted(Formatting.GREEN), false);
                 player.sendMessage(Text.literal("Use the command /area add <name> to create the area.").formatted(Formatting.YELLOW), false);
-                LOGGER.info("Player {} set second point at {}", playerId, pos);
+                LOGGER.info("Player {} set second point at {}", playerId, yAdjustedPos);
             }
 
             return TypedActionResult.success(stack, world.isClient);
