@@ -1,7 +1,6 @@
 package com.bloodfall.cobblemonspawns.client;
 
 import com.bloodfall.cobblemonspawns.Area;
-import com.bloodfall.cobblemonspawns.AreaCommands;
 import com.bloodfall.cobblemonspawns.CobblemonSpawns;
 import io.wispforest.owo.ui.base.BaseOwoScreen;
 import io.wispforest.owo.ui.component.*;
@@ -13,14 +12,14 @@ import net.fabricmc.fabric.api.networking.v1.PacketByteBufs;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.network.PacketByteBuf;
-import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.world.ServerWorld;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.BlockPos;
 import org.jetbrains.annotations.NotNull;
 
+import java.awt.image.BufferedImage;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
 public class AreaManagementScreen extends BaseOwoScreen<FlowLayout> {
 
@@ -37,9 +36,15 @@ public class AreaManagementScreen extends BaseOwoScreen<FlowLayout> {
 
     private boolean isEditing = false;
 
+    private TextureComponent miniMapTextureComponent;
+    private MiniMapGenerator miniMapGenerator;
+    private MiniMapTextureHandler miniMapTextureHandler;
+
     public AreaManagementScreen(List<Area> areas) {
         super(Text.literal("Area Management"));
         this.areas = areas;
+        this.miniMapGenerator = new MiniMapGenerator();
+        this.miniMapTextureHandler = new MiniMapTextureHandler();
     }
 
     @Override
@@ -71,6 +76,39 @@ public class AreaManagementScreen extends BaseOwoScreen<FlowLayout> {
         rootComponent.child(Components.box(Sizing.fill(100), Sizing.fixed(2))); // Divider
         rootComponent.child(detailsLayout);
         Containers.verticalScroll(Sizing.content(), Sizing.fill(20), areaListLayout);
+
+        miniMapTextureComponent = Components.texture(
+                miniMapTextureHandler.getMiniMapTextureId(),
+                0, 0,
+                150, 150,
+                150, 150
+        );
+        miniMapTextureComponent.sizing(Sizing.fixed(200), Sizing.fixed(200));
+        rootComponent.child(miniMapTextureComponent);
+
+        ButtonComponent refreshButton = (ButtonComponent) Components.button(Text.literal("Refresh Mini-Map"), button -> {
+            updateMiniMap();
+        }).sizing(Sizing.fixed(120)).verticalSizing(Sizing.fixed(20));
+        rootComponent.child(refreshButton);
+
+        updateMiniMap();
+    }
+
+    @Override
+    public void removed() {
+        super.removed();
+        if (miniMapTextureHandler.getMiniMapTextureId() != null) {
+            MinecraftClient.getInstance().getTextureManager().destroyTexture(miniMapTextureHandler.getMiniMapTextureId());
+        }
+    }
+
+    private void updateMiniMap() {
+        CompletableFuture.runAsync(() -> {
+            BufferedImage miniMapImage = miniMapGenerator.generateMiniMapImage();
+            if (miniMapImage == null) return;
+
+            miniMapTextureHandler.updateMiniMapTexture(miniMapImage);
+        });
     }
 
     private void updateAreaList() {
