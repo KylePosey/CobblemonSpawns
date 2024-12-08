@@ -1,3 +1,8 @@
 {
-  "item.cobblemonspawns.area_selection_tool": "Area Selection Tool"
+  "item.cobblemonspawns.area_selection_tool": "Area Selection Tool",
+
+  "key.cobblemonspawns.gui": "Open Management GUI",
+  "key.cobblemonspawns.debugview": "Toggle Debug View",
+
+  "category.cobblemonspawns.areas": "Cobblemon Spawns"
 }
