@@ -51,7 +51,7 @@ public class CobblemonSpawnsClient implements ClientModInitializer {
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             while (guiKeyBinding.wasPressed()) {
                 assert client.player != null;
-                client.player.sendMessage(Text.literal("Key GUI was pressed!"), false);
+                //client.player.sendMessage(Text.literal("Key GUI was pressed!"), false);
                 PacketByteBuf buf = PacketByteBufs.create();
                 ClientPlayNetworking.send(REQUEST_GUI_PACKET_PACKET_ID, buf);
             }
@@ -60,7 +60,7 @@ public class CobblemonSpawnsClient implements ClientModInitializer {
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             while (debugViewKeyBinding.wasPressed()) {
                 assert client.player != null;
-                client.player.sendMessage(Text.literal("Key Debug View was pressed!"), false);
+                //client.player.sendMessage(Text.literal("Key Debug View was pressed!"), false);
                 PacketByteBuf buf = PacketByteBufs.create();
                 ClientPlayNetworking.send(CobblemonSpawns.KEYBIND_TOGGLE_DEBUG_VIEW_PACKET_ID, buf);
             }
